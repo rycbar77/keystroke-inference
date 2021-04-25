@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/.idea/
+/train/dell77/
+/train/xiaoxin/
+/test/dell77/
