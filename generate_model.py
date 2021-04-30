@@ -1,26 +1,23 @@
 import argparse
 import os
-from queue import Queue
 
 import joblib
 import numpy as np
 from sklearn.feature_selection import RFECV
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.svm import LinearSVC
 
-from config import *
-from dst.dispatchers import dispatcher
-from dst.listeners import wav_file
-from dst.miners import MFCC
+from utils.dispatchers import dispatcher
+from utils.listeners import wav_file
+from utils.miners import MFCC
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('training_data', nargs='+', type=str)
     parser.add_argument('output_file', type=str)
-    parser.add_argument('--folds', type=int, default=5)
     args = parser.parse_args()
 
     files_to_mine = {}
@@ -83,27 +80,21 @@ if __name__ == "__main__":
     events_queue = []
     for i, (wav, label_file) in iter(enumerate(wav_files_map.items())):
         print("Processing file #{}".format(i + 1))
-        lq = Queue()
-        wav_file(wav, lq)
+        lq = wav_file(wav)
 
-        oq, dq = Queue(), Queue()
-        dispatcher(lq, oq, dq, CONFIG)
+        oq = dispatcher(lq)
 
         y = np.loadtxt(label_file, dtype=str, delimiter='\n')
-        events_queue.append((wav, y, oq, dq))
+        events_queue.append((wav, y, oq))
 
-        for _wav, y, oq, dq in events_queue:
-            if dq.empty():
-                break
-            n_res = dq.get()
+        for _wav, y, oq in events_queue:
+            n_res = len(oq)
             if not len(y.shape):
                 y = y.reshape(0)
             if n_res != len(y):
                 error_queue.append((_wav, n_res, len(y)))
             else:
-                X = []
-                while len(X) < len(y):
-                    X.append(oq.get())
+                X = [i[1] for i in oq]
                 np.savetxt(os.path.splitext(_wav)[0] + '.press', X)
                 f_X.extend(X)
                 f_y.extend(y)
@@ -118,21 +109,16 @@ if __name__ == "__main__":
         f_X.extend(np.loadtxt(press_file))
         f_y.extend(np.loadtxt(label_file, dtype=str, delimiter='\n'))
     f_X, f_y = np.array(f_X), np.array(f_y)
-    # push_peak_zise = f_X.shape[1]
-    # numCharacters = len(set(f_y))
     pipeline = [('MFCC', MFCC()), ('Scaler', MinMaxScaler())]
-    # classifier = LogisticRegression()
-    classifier = LinearSVC()
-    # classifier = MLPRegressor(hidden_layer_sizes=(150, 100))
-    pipeline.append(('Feature Selection', RFECV(classifier, step=f_X.shape[1] / 10, cv=args.folds, verbose=0)))
+    classifier = LogisticRegression()
+    # classifier = LinearSVC()
+    # classifier = MLPClassifier(hidden_layer_sizes=(500, 250))
+    pipeline.append(('Feature Selection', RFECV(classifier, step=f_X.shape[1] / 10, cv=5, verbose=0)))
     pipeline.append(('Classifier', classifier))
     clf = Pipeline(pipeline)
-    # clf = classifier
     print("Learning")
-    # model = train(f_X, f_y, push_peak_zise, numCharacters)
     clf.fit(f_X, f_y)
     print("Completed!")
-    # joblib.dump(model, args.output_file)
     joblib.dump(clf, args.output_file)
     print("Acc:")
-    print(np.mean(cross_val_score(clf, f_X, f_y, cv=args.folds + 1)))
+    print(np.mean(cross_val_score(clf, f_X, f_y, cv=6)))

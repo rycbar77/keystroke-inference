@@ -2,9 +2,7 @@ import os
 
 import numpy as np
 from wordfreq import zipf_frequency
-
-from config import CONFIG
-
+from config import n_predictions
 
 def dictionary_filter(guesses, wl, nums=50):
     wl = [x for x in wl if len(x) == len(guesses)]
@@ -18,7 +16,7 @@ def dictionary_filter(guesses, wl, nums=50):
             if letter in guess:
                 penalty += guess.index(letter)
             else:
-                penalty += CONFIG['n_predictions']
+                penalty += n_predictions
         return penalty
 
     wls = sorted([(x, score(x) - freq(x) * 0.8) for x in wl], key=lambda _x: _x[1])
@@ -26,7 +24,7 @@ def dictionary_filter(guesses, wl, nums=50):
     return wls[:nums]
 
 
-def dictionary_interactive(pred, config):
+def dictionary_interactive(pred):
     ans = input("Check Check [Y/n] ")
     if ans == 'n':
         return
@@ -38,7 +36,7 @@ def dictionary_interactive(pred, config):
     last_idx = 0
 
     dictionaries = []
-    for r, d, fs in os.walk(config['dict_folder']):
+    for r, d, fs in os.walk('../dictionaries/'):
         for fn in fs:
             dictionaries.append(os.path.abspath(os.path.join(r, fn)))
     if len(dictionaries) == 0:
@@ -56,3 +54,15 @@ def dictionary_interactive(pred, config):
         print(dictionary_filter(word_guesses, wl, 30))
         print("")
         last_idx = space + 1
+
+
+def console(in_queue):
+    output = []
+    for idx, pred in in_queue:
+        output.append(pred)
+
+    print("predictions")
+    print("")
+    for i, p in enumerate(output):
+        print("{} - {}".format(i, p))
+    dictionary_interactive(output)
