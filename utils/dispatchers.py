@@ -1,9 +1,13 @@
 import math
+import tkinter
 import warnings
+from tkinter import simpledialog
 
 import numpy as np
 from matplotlib import pyplot as plt
+
 from config import dispatcher_threshold
+
 warnings.filterwarnings("ignore")
 
 
@@ -28,15 +32,21 @@ def dispatcher(data, interact=False):
     peaks = np.array(peaks)
     threshold = dispatcher_threshold
     tau = np.percentile(peaks, threshold)
+    plt.ion()
     if interact:
         while threshold != -1:
             tau = np.percentile(peaks, threshold)
+            plt.clf()
             plt.plot(peaks)
             plt.axhline(y=tau, ls="-", c="red")
-            plt.show()
-            threshold = float(input("Choose a threshold in [0,100], input nothing or -1 to confirm.\n") or -1)
+            # plt.show()
+            root = tkinter.Tk()
+            root.withdraw()
+            r = simpledialog.askfloat('请输入阈值', 'threshold: ', initialvalue=threshold)
+            threshold = float(r or -1)
             if threshold > 100 or (threshold < 0 and threshold != -1):
                 raise Exception("Invalid threshold")
+    plt.close()
     x = 0
     step = 1
     past_x = - minimum_interval - step

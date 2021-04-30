@@ -2,7 +2,9 @@ import os
 
 import numpy as np
 from wordfreq import zipf_frequency
+
 from config import n_predictions
+
 
 def dictionary_filter(guesses, wl, nums=50):
     wl = [x for x in wl if len(x) == len(guesses)]
@@ -36,7 +38,7 @@ def dictionary_interactive(pred):
     last_idx = 0
 
     dictionaries = []
-    for r, d, fs in os.walk('../dictionaries/'):
+    for r, d, fs in os.walk('dictionaries'):
         for fn in fs:
             dictionaries.append(os.path.abspath(os.path.join(r, fn)))
     if len(dictionaries) == 0:
